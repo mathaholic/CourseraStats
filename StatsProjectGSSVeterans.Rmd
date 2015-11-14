@@ -1,0 +1,180 @@
+---
+title: 'Statistical Inference Project: GSS Veteran Analysis'
+author: "Nikki Haas"
+date: "November 2, 2015"
+output: html_document
+---
+
+##Introduction 
+
+
+My Statistical Inference project attempts to answer the question, "Do United States veterans think the government spends enough money maintaining roads and bridges?"
+
+
+There is a common belief in the United States that veterans do not have the same opportunities as the rest of the population.  Veterans are more likely to be homeless than the general population, according to a [recent news article.](http://usatoday30.usatoday.com/news/nation/2011-02-10-1Ahomelessvets10_ST_N.htm)  7% of all veterans live below the poverty line.  The socio-economic issues faced by United States veterans is of such concern, the Joint Economic Committee of the US senate drafted a [report](http://www.jec.senate.gov/public/_cache/files/628ca26b-7433-4fca-8f53-aa713eb3e756/broken-promise--the-need-to-improve-economic-security-for-veterans.pdf) outlining this group's suffering along with possible solutions.  Veterans have long defended the United States and her allies from harm and deserve to have a life as good as the general population's.
+
+
+##Gathering Data
+
+I wanted to research for myself what veterans think of their quality of life.  I reviewed our class's available databases and found the [General Social Survey](http://www3.norc.org/GSS+Website/) had data regarding US residents' veteran status and their opinions.  I hypothesize that veterans, if they are in fact disadvantaged compared to the rest of the population, will live in impoverished areas.  The roads and bridges they use to get around will be in poor repair, since insufficient taxes are raised in poor areas.  If veterans are in fact more likely to be disadvantaged compared to the general population, they will consider their roads and bridges to be underfunded.
+
+
+The General Social Survey (GSS) is an independent survey conducted semi-annually since 1972.  It has skipped a few years, and the information gathering process has been refined over time, but for our purposes it is an independent data set.  The GSS information was first gathered from randomly sampled individuals whose selection has undergone blocking.  Due to controversies over time, the random sampling has been switch between simple random sample and cluster random sampling methods.  Respondents are blocked or clustered by geography, age, gender, and employment status.  There is to this day concerned about bias due to young adults living in dormitories not being sampled.  Interviews may only be conducted at certain times of the day (after 3pm), missing shift workers.  It was proven that the 1982 and 1987 surveys unfairly biased for African Americans.  Spanish-speaking interviewers were only introduced in 2006, so the Latin American minority may have been biased against before that time.
+
+
+The information is gathered by interviewers specially trained to administer the GSS survey.  The interviews are conducted face to face, with the interviewers writing down the respondents' answers.  In rare cases, interviews have been conducted over the phone when a randomly selected individual cannot be interviewed any other way.  Recently,  the survey has been administered via web portal.  To see the full sampling information for the GSS, please click [here.](http://publicdata.norc.org:41000/gss/documents//BOOK/GSS_Codebook_AppendixA.pdf) 
+
+
+The GSS database available to us contains 57,061 cases and 114 variables.  Each case represents a single respondent to the GSS survey and is represented by one row in the database.  Each variable represents a single questions asked by the GSS survey interviewers and is represented by one column in the database.  For the purposes of my project, I will be reviewing the variables "vetyears" and "natroad." 
+
+
+"Vetyears" is an ordinal categorical variable that tells how long a respondent served in the armed forces, if at all.  The possible responses are 
+
+
+* "None"
+* "Less than 2 years"
+* "2-4 years"
+* "More than 4 years" 
+
+
+The GSS interviewers only asked about veteran status during the 1974, 1975, 1977, 1978, 1982-1985, 1988-1994, and 2010-2014 surveys. 
+
+
+"Natroad" is an ordinal categorical variable that answers the question "Does the United States Government spend too little, too much, or about right on roads and bridges?".  The possible responses are 
+
+
+* "Too little" 
+* "Too much" 
+* "About right"
+
+
+Respondents were asked about their opinions on roads and bridges during the 1984-2014 GSS surveys.
+
+
+The GSS is a combination prospective/retrospective observational study, since the GSS creators did not attempt to change any respondents' opinions or interfere in any way.  The questions ask about past experiences of the respondents, as well as their current opinions and living situations.  I can assume this data is independent, as the subset of veterans in this dataset is 1741 which is less than 10% of the total United States veteran population.
+
+
+I will be studying the 1984, 1985, 1988-1994, and 2010-2014 GSS Surveys, since those are the years that contained both variables of interest to my question.  My question can be generalized to all veterans living in the United States during these time periods, as the respondents were randomly selected.  I will not be able to establish any causality between veteran status and road and bridge opinions because the GSS is not an experiment.
+
+
+##Exploratory Analysis
+
+
+To properly review my subject of concern, I subset the GSS dataset in two ways.  First, I removed all rows that contained NA's in the "vetyears" and "natroad" fields, then I split the data into two matrices.  One matrix contained all data for respondents that had served in the armed forces for any amount of time.  The other matrix contained all data for respondents that specified they did not serve in the armed forces at any time.  The opinions of non-military respondents is important to establish a baselines to which I can compare the veterans' opinions.
+
+````{r}
+library(dplyr)
+load(url("http://bit.ly/dasi_gss_data"))
+gss <- tbl_df(gss)
+gssvet <- subset(gss, gss$vetyears != "na" & natroad != "na")
+gssvetnone <- subset(gssvet, gssvet$vetyears == "None")
+vetnonesubset <- select(gssvetnone, vetyears, natroad)
+gssvetsome <- subset(gssvet, gssvet$vetyears != "None")
+vetsomesubset <- select(gssvetsome, vetyears, natroad)
+````
+
+
+
+I am able to create a summary table for each dataset to easily view my information.  
+
+Vet Status: | Too Little  | About Right | Too Much  | Total |
+------------|-------------|-------------|-----------|-------|
+Yes         |888          |723          |130        |1741   |
+No          |3948         |4702         |951        |9601   |
+
+
+
+In total, I have `r nrow(vetnonesubset) + nrow(vetsomesubset)` cases in my dataset.  `r nrow(vetsomesubset)` represent veterans, and `r nrow(vetnonesubset)` represented respondents that have never served in the armed forces.
+
+
+For the veterans, `r 888/nrow(vetsomesubset)` of the proportion think that the United states government spends too little on roads and bridges, `r 723/nrow(vetsomesubset)` think it spends about the right amount, and `r 130/nrow(vetsomesubset)` think it spends too much.  We can represent the veteran's opinions with a barplot.
+
+````{r, echo = FALSE}
+library(dplyr)
+load(url("http://bit.ly/dasi_gss_data"))
+gss <- tbl_df(gss)
+gssvet <- subset(gss, gss$vetyears != "na" & natroad != "na")
+gssvetsome <- subset(gssvet, gssvet$vetyears != "None")
+vetsomesubset <- select(gssvetsome, natroad)
+barplot(table(vetsomesubset), col = "green")
+````
+
+
+For the civilians, `r 3948/nrow(vetnonesubset)` of the proportion think that the United States government spends too little on roads and bridges, `r 4702/nrow(vetnonesubset)` think that it spends about the right amount, and `r 951/nrow(vetnonesubset)` think it spends too much.  I can use this information to make a barplot showing the opinions of the civilians.
+
+```{r, echo = FALSE}
+load(url("http://bit.ly/dasi_gss_data"))
+gss <- tbl_df(gss)
+gssvet <- subset(gss, gss$vetyears != "na" & natroad != "na")
+gssvetnone <- subset(gssvet, gssvet$vetyears == "None")
+vetnonesubset <- select(gssvetnone, vetyears, natroad)
+barplot(table(vetnonesubset), col = "orange")
+```
+
+
+It appears that while veterans and civilians have about the same ratio for "About Right" (51% and 48%, respectively), there is a greater disparity when it comes to those who think the government spends too little on roads and bridges.  51% of veterans but only 41% of civilians think that bridges and roads are underfunded.  This may be due to random chance, but the differences are enough to investigate further using inference.
+
+
+## Inference
+
+*Hypothesis*
+
+I will set my null hypothesis as veterans have the same opinion distribution as civilians.  The alternative hypothesis to the null is  veterans have a different opinion on roads and bridges than civilians.  Formally, this can be written as:
+
+*  *H~0~* : distribution of veteran opinions = distribution of civilian opinions 
+*  *H~A~* : distribution of veteran opinions /= distribution of civilian opinions
+
+
+
+*Check Conditions*
+
+As previously mentioned, this dataset was collected for the most part using carefully controlled random sampling practices.  The total sample size for the GSS is 57,061 people, which is less than 10% of the 300 million or so people living in the United States.  The subsets I look at contain 1,741 veterans and 9,601 civilians, which is less than 10% of each group's population.  Since the sample population cannot contain a person that was both a veteran and a civilian, we can also say this dataset is mutually exclusive.  The conditions are appropriate for statistical inference.
+
+
+
+*Methodology*
+
+The methodology that best fits my question is the chi-squared analysis.  I am comparing two different datasets that contain more than two ordinal categories.  Since the chi-square analysis does not lend itself to confidence interval testing, I will create a hypothesis test.  My sample space contains 3 possible values for the variable natroad, so my chi-square distribution has 2 degrees of freedom.
+
+
+Using the test statistics from the civilian population of 41.1%, 49%, and 9.9%, I can build an test statistic table for the veterans:
+
+
+Vet Status:   | Too Little  | About Right | Too Much  | Total |
+--------------|-------------|-------------|-----------|-------|
+Observed data |888          |723          |130        |1741   |
+Expected data |715.55       |868.76       |172.36     |1741   |
+
+
+
+
+
+**Inference**
+
+The numbers for the veterans are off, but that could be due to random chance.  To begin testing my hypothesis, I'll look at the difference between the observed data and the actual data.  The Standard Error for the chi-square distribution is simply the expected data or null count, and the test statistic for the chi-square distribution is $X^2$.
+
+$$X^2 = ((888-715.55)^2/715.55) + ((723-868.76)^2/868.76) + ((130-172.36)^2/172.36) =76.427$$
+
+
+The larger $X^2$, the stronger the evidence that favors the alternative hypothesis.  Evaluating the test statistic $X^2$ and degrees of freedom with R, shows the probability is 2.784161e-17, which is 2 hundred quadrillionths.
+
+````{r}
+library("stats")
+pchisq(76.24, 2, lower.tail = FALSE)
+````
+
+
+
+
+*Conclusion*
+
+
+The p-value is much smaller than the standard significance value of $\alpha = 0.05$, thus we reject the null hypothesis.  Since the data type called for the chi-square distribution, I was unable to perform other methods of inference to compare this p-value.  
+
+
+Veterans and civilians differ on their opinions of government spending on roads and bridges.  This could be due to my original hypothesis that veterans are more likely to live in areas that can't raise enough taxes to maintain roads properly.  Another reason for this difference could be because veterans have seen how effectively money can be spent on the armed forces, and would like to see money spent effectively on roads and bridges.  
+
+
+Certainly the question of veteran inequality in the United States has may facets and more time should be devoted to the issues.  If I were to continue my research, I would data-mine the GSS for more evidence of veteran inequality such as income disparity and whether veterans own the own homes in as great as a proportion as the general population.  Further research could lead to further understanding and could enable civic leaders to better help veterans.
+
+
